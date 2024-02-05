@@ -1,8 +1,24 @@
 "use client";
 import React from "react";
 
-const handleSubmit = (e: any) => {
-  console.log("test1");
+const handleSubmit = async (e: any) => {
+  e.preventDefault();
+  try {
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url: `${e.target[0].value}`,
+      }),
+    });
+
+    const data = await response.json();
+    console.log(data);
+  } catch (err) {
+    console.log(err);
+  }
 };
 
 const UrlForm = () => {
@@ -12,7 +28,10 @@ const UrlForm = () => {
         <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 uppercase">
           URL SHORTENER
         </h1>
-        <form className="flex flex-col justify-center items-center space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col justify-center items-center space-y-4"
+        >
           <input
             type="text"
             placeholder="Paste the link"
@@ -21,7 +40,6 @@ const UrlForm = () => {
           <button
             type="submit"
             className="bg-gradient-to-r from-purple-400 to-pink-600 p-3 rounded-xl font-semibold hover:bg-gradient-to-r hover:from-purple-600 hover:to-pink-800 hover:transition-all hover:ease-in-out"
-            onClick={handleSubmit}
           >
             Submit
           </button>
