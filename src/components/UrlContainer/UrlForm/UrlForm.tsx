@@ -1,27 +1,42 @@
 "use client";
-import React from "react";
-
-const handleSubmit = async (e: any) => {
-  e.preventDefault();
-  try {
-    const response = await fetch("/api/generate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        url: `${e.target[0].value}`,
-      }),
-    });
-
-    const data = await response.json();
-    console.log(data);
-  } catch (err) {
-    console.log(err);
-  }
-};
+import React, { useState } from "react";
 
 const UrlForm = () => {
+  const [alertMessage, setAlertMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const handleSubmit = async (e: any) => {
+    e.preventDefault();
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url: `${e.target[0].value}`,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrorMessage(`Server error: ${response.status}`);
+        setAlertMessage("");
+      } else if (data.data === null) {
+        setErrorMessage(data.error.message);
+        setAlertMessage("");
+      } else {
+        setAlertMessage(data.data.shortUrl);
+        setErrorMessage("");
+      }
+    } catch (err) {
+      console.log(err);
+      setErrorMessage("An error occurred");
+      setAlertMessage("");
+    }
+  };
+
   return (
     <>
       <div className="flex flex-col justify-center items-center space-y-4 mt-80">
@@ -44,6 +59,20 @@ const UrlForm = () => {
             Submit
           </button>
         </form>
+
+        {alertMessage && (
+          <div className="mt-4 p-3 bg-green-700 text-white rounded-xl">
+            Twoj nowy link:
+            <span className="font-semibold"> {alertMessage}</span>
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="mt-4 p-3 bg-red-700 text-white rounded-xl">
+            Blad:
+            <span className="font-semibold"> {errorMessage}</span>
+          </div>
+        )}
       </div>
     </>
   );
