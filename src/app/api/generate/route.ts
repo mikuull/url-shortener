@@ -1,5 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma, generateLink } from "@/libs";
 import { isWebUri } from "valid-url";
 
@@ -7,16 +6,9 @@ type RequestData = {
   url: string;
 };
 
-async function POST(req: any, res: NextApiResponse) {
-  if (req.method !== "POST") {
-    return NextResponse.json(
-      { message: "Only POST requests are allowed" },
-      { status: 400 }
-    );
-  }
-
+async function POST(req: NextRequest) {
   const { url }: RequestData = await req.json();
-  //const host = req.headers.host;
+
   const { shortCode, shortUrl } = generateLink("localhost:3000");
 
   if (!isWebUri(url)) {
@@ -31,47 +23,52 @@ async function POST(req: any, res: NextApiResponse) {
     );
   }
 
-  const result = await prisma.$transaction(async (tx) => {
-    const originalUrl = await tx.url.findFirst({
-      where: {
-        originalUrl: url,
-      },
-    });
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const originalUrl = await tx.url.findFirst({
+        where: { originalUrl: url },
+      });
 
-    if (originalUrl) return originalUrl;
+      if (originalUrl) return originalUrl;
 
-    const newUrl = await tx.url.create({
-      data: {
-        originalUrl: url,
-        shortUrl,
-        urlCode: shortCode,
-      },
-    });
+      const newUrl = await tx.url.create({
+        data: {
+          originalUrl: url,
+          shortUrl,
+          urlCode: shortCode,
+        },
+      });
 
-    await tx.urlAnalytic.create({
-      data: {
-        clicked: 0,
-        url: {
-          connect: {
-            id: newUrl.id,
+      await tx.urlAnalytic.create({
+        data: {
+          clicked: 0,
+          url: {
+            connect: { id: newUrl.id },
           },
         },
-      },
-    });
-    return newUrl;
-  });
+      });
 
-  return NextResponse.json(
-    {
-      error: null,
-      data: {
-        originalUrl: result.originalUrl,
-        shortUrl: result.shortUrl,
-        code: result.urlCode,
+      return newUrl;
+    });
+
+    return NextResponse.json(
+      {
+        error: null,
+        data: {
+          originalUrl: result.originalUrl,
+          shortUrl: result.shortUrl,
+          code: result.urlCode,
+        },
       },
-    },
-    { status: 200 }
-  );
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Database transaction error:", error);
+    return NextResponse.json(
+      { message: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
 }
 
 export { POST as POST };
