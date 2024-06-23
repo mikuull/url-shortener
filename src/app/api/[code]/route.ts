@@ -1,12 +1,7 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/libs";
 
-type Data = {
-  name: string;
-};
-
-async function GET(req: NextApiRequest, res: any) {
+async function GET(req: NextRequest, res: any) {
   if (req.method !== "GET") {
     return NextResponse.json(
       { message: "Only GET requests are allowed" },
@@ -14,46 +9,69 @@ async function GET(req: NextApiRequest, res: any) {
     );
   }
 
-  const { code } = await res.params;
+  const { code } = res.params;
 
-  if (typeof code == "string") {
-    const result = await prisma.$transaction(async (tx) => {
-      const url = await tx.url.findUnique({
-        where: {
-          urlCode: code,
-        },
-      });
-
-      if (!url) return null;
-
-      await tx.urlAnalytic.update({
-        where: {
-          url_id: url.id,
-        },
-        data: {
-          clicked: {
-            increment: 1,
+  if (typeof code === "string") {
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        const url = await tx.url.findUnique({
+          where: {
+            urlCode: code,
           },
-        },
+        });
+
+        if (!url) return null;
+
+        await tx.urlAnalytic.update({
+          where: {
+            url_id: url.id,
+          },
+          data: {
+            clicked: {
+              increment: 1,
+            },
+          },
+        });
+
+        return url;
       });
 
-      return url;
-    });
+      if (!result) {
+        return NextResponse.json(
+          {
+            error: {
+              message: "Invalid short url code!",
+            },
+            data: null,
+          },
+          { status: 400 }
+        );
+      }
 
-    if (!result) {
+      return NextResponse.redirect(result.originalUrl);
+    } catch (error) {
+      console.error("Error fetching URL:", error);
       return NextResponse.json(
         {
           error: {
-            message: "Invalid short url code!",
+            message: "Internal Server Error",
           },
           data: null,
         },
-        { status: 400 }
+        { status: 500 }
       );
     }
-
-    return NextResponse.redirect(result.originalUrl);
+  } else {
+    return NextResponse.json(
+      {
+        error: {
+          message: "Invalid short url code!",
+        },
+        data: null,
+      },
+      { status: 400 }
+    );
   }
 }
 
-export { GET as GET };
+export { GET };
