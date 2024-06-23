@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/libs";
 
-async function handleGetRequest(req: Request, res: any) {
+export async function GET(req: Request, res: any) {
   if (req.method !== "GET") {
     return NextResponse.json(
       { message: "Only GET requests are allowed" },
@@ -73,5 +73,3 @@ async function handleGetRequest(req: Request, res: any) {
     );
   }
 }
-
-export { handleGetRequest as GET };
