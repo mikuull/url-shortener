@@ -73,3 +73,5 @@ async function GET(req: NextRequest, res: any) {
     );
   }
 }
+
+export { GET as GET };
